@@ -152,21 +152,21 @@ func (n *node) addRoute(path string, handle Handle) {
 					if len(path) >= len(n.path) && n.path == path[:len(n.path)] &&
 						(len(n.path) == len(path) || path[len(n.path)] == '/') {
 						continue walk
-					} else {
-						// Wildcard conflict
-						var pathSeg string
-						if n.nType == catchAll {
-							pathSeg = path
-						} else {
-							pathSeg = strings.SplitN(path, "/", 2)[0]
-						}
-						prefix := fullPath[:strings.Index(fullPath, pathSeg)] + n.path
-						panic("'" + pathSeg +
-							"' in new path '" + fullPath +
-							"' conflicts with existing wildcard '" + n.path +
-							"' in existing prefix '" + prefix +
-							"'")
 					}
+
+					// Wildcard conflict
+					var pathSeg string
+					if n.nType == catchAll {
+						pathSeg = path
+					} else {
+						pathSeg = strings.SplitN(path, "/", 2)[0]
+					}
+					prefix := fullPath[:strings.Index(fullPath, pathSeg)] + n.path
+					panic("'" + pathSeg +
+						"' in new path '" + fullPath +
+						"' conflicts with existing wildcard '" + n.path +
+						"' in existing prefix '" + prefix +
+						"'")
 				}
 
 				c := path[0]
