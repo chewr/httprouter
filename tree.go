@@ -105,6 +105,7 @@ func (n *node) addRoute(path string, handle Handle) {
 
 			// Split edge
 			if i < len(n.path) {
+				// TODO rchew type logic
 				child := node{
 					path:      n.path[i:],
 					wildChild: n.wildChild,
@@ -295,25 +296,25 @@ func (n *node) insertChild(numParams uint8, path, fullPath string, handle Handle
 			n.path = path[offset:i]
 
 			// first node: catchAll node with empty path
-			child := &node{
-				wildChild: true,
-				nType:     catchAll,
-				maxParams: 1,
-			}
-			n.children = []*node{child}
-			n.indices = string(path[i])
-			n = child
-			n.priority++
+			// child := &node{}
+			// n.children = []*node{child}
+			// n.indices = string(path[i])
+			// n = child
+			// n.priority = 1
+			// n.maxParams = 1
+
+			n.wildChild = true
+			n.nType = catchAll
 
 			// second node: node holding the variable
-			child = &node{
+			catchAllChild := &node{
 				path:      path[i:],
 				nType:     catchAll,
 				maxParams: 1,
 				handle:    handle,
 				priority:  1,
 			}
-			n.children = []*node{child}
+			n.children = []*node{catchAllChild}
 
 			return
 		}
