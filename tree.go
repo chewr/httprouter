@@ -304,7 +304,6 @@ func (n *node) insertChild(numParams uint8, path, fullPath string, handle Handle
 			// n.maxParams = 1
 
 			n.wildChild = true
-			n.nType = catchAll
 
 			// second node: node holding the variable
 			catchAllChild := &node{
