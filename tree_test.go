@@ -13,6 +13,16 @@ import (
 	"testing"
 )
 
+func printTree(panics interface{}, route string, tree *node) {
+	var msg string
+	if panics == nil {
+		msg = "Added route"
+	} else {
+		msg = "Failed to add route"
+	}
+	fmt.Printf("%s %s \n%s\n", msg, route, PrettyPrint(tree))
+}
+
 func printChildren(n *node, prefix string) {
 	fmt.Printf(" %02d:%02d %s%s[%d] %v %t %d \r\n", n.priority, n.maxParams, prefix, n.path, len(n.children), n.handle, n.wildChild, n.nType)
 	for l := len(n.path); l > 0; l-- {
@@ -131,6 +141,7 @@ func TestTreeAddAndGet(t *testing.T) {
 	}
 	for _, route := range routes {
 		tree.addRoute(route, fakeHandler(route))
+		printTree(nil, route, tree)
 	}
 
 	//printChildren(tree, "")
@@ -174,6 +185,7 @@ func TestTreeWildcard(t *testing.T) {
 	}
 	for _, route := range routes {
 		tree.addRoute(route, fakeHandler(route))
+		printTree(nil, route, tree)
 	}
 
 	//printChildren(tree, "")
@@ -220,6 +232,7 @@ func testRoutes(t *testing.T, routes []testRoute) {
 		recv := catchPanic(func() {
 			tree.addRoute(route.path, nil)
 		})
+		printTree(recv, route.path, tree)
 
 		if route.conflict {
 			if recv == nil {
@@ -284,6 +297,7 @@ func TestTreeDupliatePath(t *testing.T) {
 		recv := catchPanic(func() {
 			tree.addRoute(route, fakeHandler(route))
 		})
+		printTree(recv, route, tree)
 		if recv != nil {
 			t.Fatalf("panic inserting route '%s': %v", route, recv)
 		}
@@ -292,6 +306,7 @@ func TestTreeDupliatePath(t *testing.T) {
 		recv = catchPanic(func() {
 			tree.addRoute(route, nil)
 		})
+		printTree(recv, route, tree)
 		if recv == nil {
 			t.Fatalf("no panic while inserting duplicate route '%s", route)
 		}
@@ -321,6 +336,7 @@ func TestEmptyWildcardName(t *testing.T) {
 		recv := catchPanic(func() {
 			tree.addRoute(route, nil)
 		})
+		printTree(recv, route, tree)
 		if recv == nil {
 			t.Fatalf("no panic while inserting route with empty wildcard name '%s", route)
 		}
@@ -361,6 +377,7 @@ func TestTreeDoubleWildcard(t *testing.T) {
 		recv := catchPanic(func() {
 			tree.addRoute(route, nil)
 		})
+		printTree(recv, route, tree)
 
 		if rs, ok := recv.(string); !ok || !strings.HasPrefix(rs, panicMsg) {
 			t.Fatalf(`"Expected panic "%s" for route '%s', got "%v"`, panicMsg, route, recv)
@@ -412,6 +429,7 @@ func TestTreeTrailingSlashRedirect(t *testing.T) {
 		recv := catchPanic(func() {
 			tree.addRoute(route, fakeHandler(route))
 		})
+		printTree(recv, route, tree)
 		if recv != nil {
 			t.Fatalf("panic inserting route '%s': %v", route, recv)
 		}
@@ -468,6 +486,7 @@ func TestTreeRootTrailingSlashRedirect(t *testing.T) {
 	recv := catchPanic(func() {
 		tree.addRoute("/:test", fakeHandler("/:test"))
 	})
+	printTree(recv, ":/test", tree)
 	if recv != nil {
 		t.Fatalf("panic inserting test route: %v", recv)
 	}
@@ -522,6 +541,7 @@ func TestTreeFindCaseInsensitivePath(t *testing.T) {
 		recv := catchPanic(func() {
 			tree.addRoute(route, fakeHandler(route))
 		})
+		printTree(recv, route, tree)
 		if recv != nil {
 			t.Fatalf("panic inserting route '%s': %v", route, recv)
 		}
@@ -640,7 +660,9 @@ func TestTreeInvalidNodeType(t *testing.T) {
 
 	tree := &node{}
 	tree.addRoute("/", fakeHandler("/"))
+	printTree(nil, "/", tree)
 	tree.addRoute("/:page", fakeHandler("/:page"))
+	printTree(nil, "/:page", tree)
 
 	// set invalid node type
 	tree.children[0].nType = 42
@@ -689,11 +711,13 @@ func TestTreeWildcardConflictEx(t *testing.T) {
 
 		for _, route := range routes {
 			tree.addRoute(route, fakeHandler(route))
+			printTree(nil, route, tree)
 		}
 
 		recv := catchPanic(func() {
 			tree.addRoute(conflict.route, fakeHandler(conflict.route))
 		})
+		printTree(recv, conflict.route, tree)
 
 		if !regexp.MustCompile(fmt.Sprintf("'%s' in new path .* conflicts with existing wildcard '%s' in existing prefix '%s'", conflict.segPath, conflict.existSegPath, conflict.existPath)).MatchString(fmt.Sprint(recv)) {
 			t.Fatalf("invalid wildcard conflict error (%v)", recv)
