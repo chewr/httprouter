@@ -107,7 +107,6 @@ func (n *node) addRoute(path string, handle Handle) {
 					"'")
 			}
 
-
 			// Split edge
 			if i < len(n.path) {
 				child := node{
@@ -159,7 +158,7 @@ func (n *node) addRoute(path string, handle Handle) {
 
 				// Check if a path param might match
 				if n.wildChild && c == ':' || c == '*' {
-					n = n.children[len(n.children) - 1]
+					n = n.children[len(n.children)-1]
 					n.priority++
 
 					// Update maxParams of the child node
@@ -201,7 +200,7 @@ func (n *node) addRoute(path string, handle Handle) {
 					// swap any param children to last place
 					if n.wildChild {
 						last := len(n.children) - 1
-						n.children[last - 1], n.children[last] = n.children[last], n.children[last - 1]
+						n.children[last-1], n.children[last] = n.children[last], n.children[last-1]
 					}
 
 					n.incrementChildPrio(len(n.indices) - 1)
