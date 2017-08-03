@@ -95,17 +95,11 @@ func (n *node) addRoute(path string, handle Handle) {
 			i := 0
 			max := min(len(path), len(n.path))
 			for i < max && path[i] == n.path[i] {
-				if path[i] == '*' {
-					panic("Cannot register '" + fullPath +
-						"'. Segment '" + path[i:] +
-						"' conflicts with existing route '" + n.path[i:])
-				}
 				i++
 			}
 
 			// Split edge
 			if i < len(n.path) {
-				// TODO rchew type logic
 				child := node{
 					path:      n.path[i:],
 					wildChild: n.wildChild,
@@ -134,6 +128,15 @@ func (n *node) addRoute(path string, handle Handle) {
 			// Make new node a child of this node
 			if i < len(path) {
 				path = path[i:]
+
+				if n.nType == catchAll {
+					prefix := fullPath[:strings.Index(fullPath, path)]
+					panic("'" + path +
+					"' in new path '" + fullPath +
+					"' cannot extend existing catch-all '" + n.path +
+					"' in existing prefix '" + prefix +
+					"'")
+				}
 
 				if n.wildChild {
 					n = n.children[0]
@@ -235,13 +238,6 @@ func (n *node) insertChild(numParams uint8, path, fullPath string, handle Handle
 			}
 		}
 
-		// check if this Node existing children which would be
-		// unreachable if we insert the wildcard here
-		if len(n.children) > 0 {
-			panic("wildcard route '" + path[i:end] +
-				"' conflicts with existing children in path '" + fullPath + "'")
-		}
-
 		// check if the wildcard has a name
 		if end-i < 2 {
 			panic("wildcards must be named with a non-empty name in path '" + fullPath + "'")
@@ -279,6 +275,13 @@ func (n *node) insertChild(numParams uint8, path, fullPath string, handle Handle
 			}
 
 		} else { // catchAll
+			// check if this Node existing children which would be
+			// unreachable if we insert the wildcard here
+			if len(n.children) > 0 {
+				panic("wildcard route '" + path[i:end] +
+					"' conflicts with existing children in path '" + fullPath + "'")
+			}
+
 			if end != max || numParams > 1 {
 				panic("catch-all routes are only allowed at the end of the path in path '" + fullPath + "'")
 			}
