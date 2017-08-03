@@ -98,6 +98,16 @@ func (n *node) addRoute(path string, handle Handle) {
 				i++
 			}
 
+			if n.nType == catchAll {
+				prefix := fullPath[:strings.Index(fullPath, path)] + n.path
+				panic("'" + path +
+					"' in new path '" + fullPath +
+					"' cannot extend existing catch-all '" + n.path +
+					"' in existing prefix '" + prefix +
+					"'")
+			}
+
+
 			// Split edge
 			if i < len(n.path) {
 				child := node{
@@ -129,17 +139,27 @@ func (n *node) addRoute(path string, handle Handle) {
 			if i < len(path) {
 				path = path[i:]
 
-				if n.nType == catchAll {
-					prefix := fullPath[:strings.Index(fullPath, path)]
-					panic("'" + path +
-					"' in new path '" + fullPath +
-					"' cannot extend existing catch-all '" + n.path +
-					"' in existing prefix '" + prefix +
-					"'")
+				c := path[0]
+
+				// slash after param
+				if n.nType == param && c == '/' && len(n.children) == 1 {
+					n = n.children[0]
+					n.priority++
+					continue walk
 				}
 
-				if n.wildChild {
-					n = n.children[0]
+				// Check if a child with the next path byte exists
+				for i := 0; i < len(n.indices); i++ {
+					if c == n.indices[i] {
+						i = n.incrementChildPrio(i)
+						n = n.children[i]
+						continue walk
+					}
+				}
+
+				// Check if a path param might match
+				if n.wildChild && c == ':' || c == '*' {
+					n = n.children[len(n.children) - 1]
 					n.priority++
 
 					// Update maxParams of the child node
@@ -169,24 +189,6 @@ func (n *node) addRoute(path string, handle Handle) {
 						"'")
 				}
 
-				c := path[0]
-
-				// slash after param
-				if n.nType == param && c == '/' && len(n.children) == 1 {
-					n = n.children[0]
-					n.priority++
-					continue walk
-				}
-
-				// Check if a child with the next path byte exists
-				for i := 0; i < len(n.indices); i++ {
-					if c == n.indices[i] {
-						i = n.incrementChildPrio(i)
-						n = n.children[i]
-						continue walk
-					}
-				}
-
 				// Otherwise insert it
 				if c != ':' && c != '*' {
 					// []byte for proper unicode char conversion, see #65
@@ -195,6 +197,13 @@ func (n *node) addRoute(path string, handle Handle) {
 						maxParams: numParams,
 					}
 					n.children = append(n.children, child)
+
+					// swap any param children to last place
+					if n.wildChild {
+						last := len(n.children) - 1
+						n.children[last - 1], n.children[last] = n.children[last], n.children[last - 1]
+					}
+
 					n.incrementChildPrio(len(n.indices) - 1)
 					n = child
 				}
@@ -254,7 +263,7 @@ func (n *node) insertChild(numParams uint8, path, fullPath string, handle Handle
 				nType:     param,
 				maxParams: numParams,
 			}
-			n.children = []*node{child}
+			n.children = append(n.children, child)
 			n.wildChild = true
 			n = child
 			n.priority++
@@ -298,29 +307,17 @@ func (n *node) insertChild(numParams uint8, path, fullPath string, handle Handle
 
 			n.path = path[offset:i]
 			n.indices = string(path[i])
-			// offset = i
-			// i++
-
-			// // first node: catchAll node with empty path
-			// child := &node{
-			// 	path: path[offset:i],
-			// }
-			// n.children = []*node{child}
-			// n = child
-			// n.priority = 1
-			// n.maxParams = 1
-
 			n.wildChild = true
 
 			// second node: node holding the variable
-			catchAllChild := &node{
+			child := &node{
 				path:      path[i:],
 				nType:     catchAll,
 				maxParams: 1,
 				handle:    handle,
 				priority:  1,
 			}
-			n.children = []*node{catchAllChild}
+			n.children = []*node{child}
 
 			return
 		}
