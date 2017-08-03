@@ -250,7 +250,7 @@ func testRoutes(t *testing.T, routes []testRoute) {
 func TestTreeWildcardConflict(t *testing.T) {
 	routes := []testRoute{
 		{"/cmd/:tool/:sub", false},
-		{"/cmd/vet", true},
+		{"/cmd/vet", false},
 		{"/src/*filepath", false},
 		{"/src/*filepathx", true},
 		{"/src/", true},
@@ -258,12 +258,16 @@ func TestTreeWildcardConflict(t *testing.T) {
 		{"/src1/*filepath", true},
 		{"/src2*filepath", true},
 		{"/search/:query", false},
-		{"/search/invalid", true},
+		{"/search/valid", false},
 		{"/user_:name", false},
-		{"/user_x", true},
+		{"/user_x", false},
 		{"/user_:name", false},
 		{"/id:id", false},
-		{"/id/:id", true},
+		{"/id/:id", false},
+		{"/tasks/:taskid", false},
+		{"/tasks/find_all", false},
+		{"/tasks/finished", false},
+		{"/tasks/:bad", true},
 	}
 	testRoutes(t, routes)
 }
@@ -271,20 +275,24 @@ func TestTreeWildcardConflict(t *testing.T) {
 func TestTreeChildConflict(t *testing.T) {
 	routes := []testRoute{
 		{"/cmd/vet", false},
-		{"/cmd/:tool/:sub", true},
+		{"/cmd/:tool/:sub", false},
 		{"/src/AUTHORS", false},
 		{"/src/*filepath", true},
 		{"/user_x", false},
-		{"/user_:name", true},
+		{"/user_:name", false},
 		{"/id/:id", false},
-		{"/id:id", true},
-		{"/:id", true},
+		{"/id:id", false},
+		{"/products/deleted", false},
+		{"/products/d_bloop", false},
+		{"/products/:product/version", false},
+		{"/products/:productid", true},
+		{"/:id", false},
 		{"/*filepath", true},
 	}
 	testRoutes(t, routes)
 }
 
-func TestTreeDupliatePath(t *testing.T) {
+func TestTreeDuplicatePath(t *testing.T) {
 	tree := &node{}
 
 	routes := [...]string{
@@ -692,11 +700,9 @@ func TestTreeWildcardConflictEx(t *testing.T) {
 		existPath    string
 		existSegPath string
 	}{
-		{"/who/are/foo", "/foo", `/who/are/\*you`, `/\*you`},
-		{"/who/are/foo/", "/foo/", `/who/are/\*you`, `/\*you`},
-		{"/who/are/foo/bar", "/foo/bar", `/who/are/\*you`, `/\*you`},
-		{"/conxxx", "xxx", `/con:tact`, `:tact`},
-		{"/conooo/xxx", "ooo", `/con:tact`, `:tact`},
+		{"/con:xxx", ":xxx", `/con:tact`, `:tact`},
+		{"/con:ooo/xxx", ":ooo", `/con:tact`, `:tact`},
+		{"/con:tact_bad", ":tact_bad", `/con:tact`, `:tact`},
 	}
 
 	for _, conflict := range conflicts {
@@ -721,6 +727,47 @@ func TestTreeWildcardConflictEx(t *testing.T) {
 		printTree(recv, conflict.route, tree)
 
 		if !regexp.MustCompile(fmt.Sprintf("'%s' in new path .* conflicts with existing wildcard '%s' in existing prefix '%s'", conflict.segPath, conflict.existSegPath, conflict.existPath)).MatchString(fmt.Sprint(recv)) {
+			t.Fatalf("invalid wildcard conflict error (%v)", recv)
+		}
+	}
+}
+
+func TestTreeCatchAllConflictEx(t *testing.T) {
+	conflicts := [...]struct {
+		route        string
+		segPath      string
+		existPath    string
+		existSegPath string
+	}{
+		{"/who/are/foo", "/foo", `/who/are/\*you`, `/\*you`},
+		{"/who/are/foo/", "/foo/", `/who/are/\*you`, `/\*you`},
+		{"/who/are/foo/bar", "/foo/bar", `/who/are/\*you`, `/\*you`},
+		{"/who/are/:foo", "/:foo", `/who/are/\*you`, `/\*you`},
+		{"/who/are/*you/bar", `/\*you/bar`, `/who/are/\*you`, `/\*you`},
+	}
+
+	for _, conflict := range conflicts {
+		// I have to re-create a 'tree', because the 'tree' will be
+		// in an inconsistent state when the loop recovers from the
+		// panic which threw by 'addRoute' function.
+		tree := &node{}
+		routes := [...]string{
+			"/con:tact",
+			"/who/are/*you",
+			"/who/foo/hello",
+		}
+
+		for _, route := range routes {
+			tree.addRoute(route, fakeHandler(route))
+			printTree(nil, route, tree)
+		}
+
+		recv := catchPanic(func() {
+			tree.addRoute(conflict.route, fakeHandler(conflict.route))
+		})
+		printTree(recv, conflict.route, tree)
+
+		if !regexp.MustCompile(fmt.Sprintf("'%s' in new path .* cannot extend existing catch-all '%s' in existing prefix '%s'", conflict.segPath, conflict.existSegPath, conflict.existPath)).MatchString(fmt.Sprint(recv)) {
 			t.Fatalf("invalid wildcard conflict error (%v)", recv)
 		}
 	}
