@@ -294,11 +294,15 @@ func (n *node) insertChild(numParams uint8, path, fullPath string, handle Handle
 			}
 
 			n.path = path[offset:i]
+			n.indices = string(path[i])
+			// offset = i
+			// i++
 
-			// first node: catchAll node with empty path
-			// child := &node{}
+			// // first node: catchAll node with empty path
+			// child := &node{
+			// 	path: path[offset:i],
+			// }
 			// n.children = []*node{child}
-			// n.indices = string(path[i])
 			// n = child
 			// n.priority = 1
 			// n.maxParams = 1
@@ -435,7 +439,7 @@ walk: // outer loop for walking the tree
 				if n.indices[i] == '/' {
 					n = n.children[i]
 					tsr = (len(n.path) == 1 && n.handle != nil) ||
-						(n.nType == catchAll && n.children[0].handle != nil)
+						(n.nType == catchAll && n.handle != nil)
 					return
 				}
 			}
