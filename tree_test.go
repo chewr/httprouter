@@ -230,7 +230,7 @@ func testRoutes(t *testing.T, routes []testRoute) {
 
 	for _, route := range routes {
 		recv := catchPanic(func() {
-			tree.addRoute(route.path, nil)
+			tree.addRoute(route.path, fakeHandler(route.path))
 		})
 		printTree(recv, route.path, tree)
 
@@ -250,6 +250,7 @@ func TestTreeWildcardConflict(t *testing.T) {
 	routes := []testRoute{
 		{"/cmd/:tool/:sub", false},
 		{"/cmd/vet", true},
+		{"/cmd/:tool", false},
 		{"/src/*filepath", false},
 		{"/src/*filepathx", true},
 		{"/src/", true},
@@ -260,7 +261,7 @@ func TestTreeWildcardConflict(t *testing.T) {
 		{"/search/invalid", true},
 		{"/user_:name", false},
 		{"/user_x", true},
-		{"/user_:name", false},
+		{"/user_:name/login", false},
 		{"/id:id", false},
 		{"/id/:id", true},
 	}
