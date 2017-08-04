@@ -6,6 +6,7 @@ package httprouter
 
 import (
 	"fmt"
+	"math/rand"
 	"net/http"
 	"reflect"
 	"regexp"
@@ -67,7 +68,7 @@ func checkRequests(t *testing.T, tree *node, requests testRequests) {
 		}
 
 		if !reflect.DeepEqual(ps, request.ps) {
-			t.Errorf("Params mismatch for route '%s'", request.path)
+			t.Errorf("Params mismatch for route '%s':\n%+v != %+v", request.path, ps, request.ps)
 		}
 	}
 }
@@ -771,4 +772,169 @@ func TestTreeCatchAllConflictEx(t *testing.T) {
 			t.Fatalf("invalid wildcard conflict error (%v)", recv)
 		}
 	}
+}
+
+var letters = []byte("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
+
+func genParam() string {
+	const defaultLength int = 16
+	b := make([]byte, defaultLength)
+	for i := range b {
+		b[i] = letters[rand.Intn(len(letters))]
+	}
+	return string(b)
+}
+
+func genFilepath() string {
+	return fmt.Sprintf("%s/%s/%s", genParam(), genParam(), genParam())
+}
+
+func createRequestAndParams(route string) (string, Params) {
+	// scan for path vars
+	pathBuf := make([]byte, 0)
+	var ps []Param
+	inParam, inCatchAll := false, false
+	offset, i := 0, 0
+	for i < len(route) {
+		switch route[i] {
+		case ':':
+			offset = i + 1
+			inParam = true
+		case '*':
+			offset = i + 1
+			inCatchAll = true
+		case '/':
+			if inParam {
+				requestVar := genParam()
+				ps = append(ps, Param{route[offset:i], requestVar})
+				pathBuf = append(pathBuf, requestVar...)
+			}
+			inParam = false
+		default:
+		}
+		if !inParam && !inCatchAll {
+			pathBuf = append(pathBuf, route[i])
+		}
+		i++
+	}
+
+	if inCatchAll {
+		fpVar := genFilepath()
+		ps = append(ps, Param{route[offset:i], "/" + fpVar})
+		pathBuf = append(pathBuf, fpVar...)
+	}
+
+	if inParam {
+		requestVar := genParam()
+		ps = append(ps, Param{route[offset:i], requestVar})
+		pathBuf = append(pathBuf, requestVar...)
+	}
+
+	return string(pathBuf), Params(ps)
+}
+
+func TestTreeAddAndGetWildcard(t *testing.T) {
+	rand.Seed(1)
+	routes := []string{
+		"/",
+		"/services/:service_id/preview",
+		"/services/delete",
+		"/services/deleter",
+		"/services/delta",
+		"/products/list",
+		"/products/:product_id",
+		"/files/v1/:dir",
+		"/files/v1/:dir/*filepath",
+		"/files/v2/:dir/*filepath",
+		"/files/v2/:dir",
+		"/users/v1/user_:name",
+		"/users/v1/user_x",
+		"/users/v1/user_/blah",
+		"/param/partial:param",
+		"/param/partial_foobar",
+		"/param/partial_foo/baz",
+		"/param/partial_foo/roo",
+		"/param/partial_foo_:param",
+		"/param/partial_foo_other:param",
+		"/param/tsr_and_wildcard/:wildcard/endpoint",
+		"/param/tsr_and_wildcard/static/",
+		"/param/tsr_and_wildcard/static_blah",
+		"/param/tsr_and_wildcard/static_blork",
+		"/param/tsr_and_wildcard/_static/",
+	}
+
+	tree := &node{}
+
+	requests := testRequests{}
+
+	for _, route := range routes {
+		recv := catchPanic(func() {
+			tree.addRoute(route, fakeHandler(route))
+		})
+
+		if recv != nil {
+			t.Fatalf("panic inserting route '%s': %v", route, recv)
+		}
+
+		printTree(recv, route, tree)
+
+		requestPath, ps := createRequestAndParams(route)
+
+		requests = append(requests,
+			struct {
+				path       string
+				nilHandler bool
+				route      string
+				ps         Params
+			}{
+				requestPath,
+				false,
+				route,
+				ps,
+			},
+		)
+	}
+
+	checkRequests(t, tree, requests)
+
+	addlRequests := testRequests{
+		{
+			"/param/partial_fool_me_once",
+			false,
+			"/param/partial:param",
+			Params{Param{"param", "_fool_me_once"}},
+		},
+		{
+			"/param/partial_foo_parametric_equations",
+			false,
+			"/param/partial_foo_:param",
+			Params{Param{"param", "parametric_equations"}},
+		},
+		{
+			"/param/partial_foo_otherparam",
+			false,
+			"/param/partial_foo_other:param",
+			Params{Param{"param", "param"}},
+		},
+		{
+			"/param/tsr_and_wildcard/static",
+			true,
+			"",
+			nil,
+		},
+		{
+			"/param/tsr_and_wildcard/static_bl",
+			true,
+			"",
+			Params{Param{"wildcard", "static_bl"}},
+		},
+		{
+			"/param/tsr_and_wildcard/_static",
+			true,
+			"",
+			nil,
+		},
+	}
+
+	checkRequests(t, tree, addlRequests)
 }
