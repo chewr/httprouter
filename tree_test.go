@@ -361,6 +361,9 @@ func TestTreeCatchAllConflict(t *testing.T) {
 		{"/src3/*filepath", false},
 		{"/src3/*filepath/x", true},
 		{"/src/*filepath", false},
+		{"/src4/static", false},
+		{"/src4/*filepath", true},
+
 	}
 	testRoutes(t, routes)
 }
@@ -847,6 +850,9 @@ func TestTreeAddAndGetWildcard(t *testing.T) {
 		"/files/v1/:dir/*filepath",
 		"/files/v2/:dir/*filepath",
 		"/files/v2/:dir",
+		"/files/v3/foobar",
+		"/files/v3/foo:param",
+		"/files/v3/foo/*filepath",
 		"/users/v1/user_:name",
 		"/users/v1/user_x",
 		"/users/v1/user_/blah",
@@ -903,6 +909,12 @@ func TestTreeAddAndGetWildcard(t *testing.T) {
 			false,
 			"/param/partial:param",
 			Params{Param{"param", "_fool_me_once"}},
+		},
+		{
+			"/products/liXX",
+			false,
+			"/products/:product_id",
+			Params{Param{"product_id", "liXX"}},
 		},
 		{
 			"/param/partial_foo_parametric_equations",

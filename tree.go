@@ -157,7 +157,7 @@ func (n *node) addRoute(path string, handle Handle) {
 				}
 
 				// Check if a path param might match
-				if n.wildChild && c == ':' || c == '*' {
+				if n.wildChild && c == ':' {
 					n = n.children[len(n.children)-1]
 					n.priority++
 
@@ -174,12 +174,7 @@ func (n *node) addRoute(path string, handle Handle) {
 					}
 
 					// Wildcard conflict
-					var pathSeg string
-					if n.nType == catchAll {
-						pathSeg = path
-					} else {
-						pathSeg = strings.SplitN(path, "/", 2)[0]
-					}
+					pathSeg := strings.SplitN(path, "/", 2)[0]
 					prefix := fullPath[:strings.Index(fullPath, pathSeg)] + n.path
 					panic("'" + pathSeg +
 						"' in new path '" + fullPath +
@@ -350,6 +345,9 @@ walk: // outer loop for walking the tree
 							pp := 0
 						probe:
 							for {
+								if np.nType == catchAll {
+									break probe
+								}
 								if len(path[pp:]) >= len(np.path) {
 									// find match or end of path parameter
 									j := 0
@@ -402,6 +400,7 @@ walk: // outer loop for walking the tree
 										}
 									}
 								}
+
 								// Nothing found. We can recommend to redirect to the same URL with an
 								// extra trailing slash if a leaf exists for that path
 								if (path[pp:] == "/") ||
