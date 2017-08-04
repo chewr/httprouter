@@ -269,11 +269,11 @@ func TestTreeChildConflict(t *testing.T) {
 		{"/user_:name", false},
 		{"/id/:id", false},
 		{"/id:id", false},
+		{"/:id", false},
 		{"/products/deleted", false},
 		{"/products/d_bloop", false},
 		{"/products/:product/version", false},
 		{"/products/:productid", true},
-		{"/:id", false},
 		{"/*filepath", true},
 	}
 	testRoutes(t, routes)
