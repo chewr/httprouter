@@ -705,7 +705,7 @@ walk: // outer loop for walking the tree
 					if n.indices[i] == '/' {
 						n = n.children[i]
 						if (len(n.path) == 1 && n.handle != nil) ||
-							(n.nType == catchAll && n.children[0].handle != nil) {
+							(n.nType == catchAll && n.handle != nil) {
 							return append(ciPath, '/'), true
 						}
 						return ciPath, false

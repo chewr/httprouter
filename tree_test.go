@@ -363,7 +363,6 @@ func TestTreeCatchAllConflict(t *testing.T) {
 		{"/src/*filepath", false},
 		{"/src4/static", false},
 		{"/src4/*filepath", true},
-		{"/src5/*filepath", true},
 	}
 	testRoutes(t, routes)
 }
