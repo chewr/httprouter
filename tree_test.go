@@ -363,6 +363,7 @@ func TestTreeCatchAllConflict(t *testing.T) {
 		{"/src/*filepath", false},
 		{"/src4/static", false},
 		{"/src4/*filepath", true},
+		{"/src5/*filepath", true},
 	}
 	testRoutes(t, routes)
 }
@@ -436,6 +437,12 @@ func TestTreeTrailingSlashRedirect(t *testing.T) {
 		"/no/a",
 		"/no/b",
 		"/api/hello/:name",
+		"/api/hello/world",
+		"/api/hello/foo/",
+		"/api/hello/bar/",
+		"/api/hello/barre/",
+		"/files/:param",
+		"/files/foobar/*filepath",
 	}
 	for _, route := range routes {
 		recv := catchPanic(func() {
@@ -464,6 +471,10 @@ func TestTreeTrailingSlashRedirect(t *testing.T) {
 		"/admin/config/",
 		"/admin/config/permissions/",
 		"/doc/",
+		"/api/hello/world/",
+		"/api/hello/foo",
+		"/api/hello/bar",
+		"/files/foobar",
 	}
 	for _, route := range tsrRoutes {
 		handler, _, tsr := tree.getValue(route)
