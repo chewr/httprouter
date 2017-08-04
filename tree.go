@@ -338,18 +338,89 @@ walk: // outer loop for walking the tree
 		if len(path) > len(n.path) {
 			if path[:len(n.path)] == n.path {
 				path = path[len(n.path):]
-				// If this node does not have a wildcard (param or catchAll)
-				// child,  we can just look up the next child node and continue
-				// to walk down the tree
-				if !n.wildChild {
-					c := path[0]
-					for i := 0; i < len(n.indices); i++ {
-						if c == n.indices[i] {
+				c := path[0]
+				for i := 0; i < len(n.indices); i++ {
+					if c == n.indices[i] {
+
+						// If this node has a wildcard (param or catchAll)
+						// child, we must check for a match for the path
+						// within the subtree before
+						if n.wildChild {
+							np := n.children[i]
+							pp := 0
+						probe:
+							for {
+								if len(path[pp:]) >= len(np.path) {
+									// find match or end of path parameter
+									j := 0
+									staticMatch := false
+									for j < len(np.path) {
+										if path[pp+j] != np.path[j] {
+											break probe
+										}
+										staticMatch = staticMatch || path[pp+j] == '/'
+										j++
+									}
+
+									if np.wildChild {
+										n = np
+										path = path[pp:]
+										continue walk
+									}
+
+									if pp+j == len(path) {
+										// We should have reached the node containing the handle.
+										// Check if this node has a handle registered.
+										if handle = np.handle; handle != nil {
+											return
+										}
+
+										// No handle found. Check if a handle for this path + a
+										// trailing slash exists for trailing slash recommendation
+										for i2 := 0; i2 < len(np.indices); i2++ {
+											if np.indices[i2] == '/' {
+												np = np.children[i2]
+												tsr = (len(np.path) == 1 && np.handle != nil) ||
+													(np.nType == catchAll && np.handle != nil)
+												return
+											}
+										}
+										break probe
+									}
+
+									pp += j
+									c := path[pp]
+									for j := 0; j < len(np.indices); j++ {
+										if c == np.indices[j] {
+											if staticMatch {
+												n = np.children[j]
+												path = path[pp:]
+												continue walk
+											}
+											np = np.children[j]
+											continue probe
+										}
+									}
+								}
+								// Nothing found. We can recommend to redirect to the same URL with an
+								// extra trailing slash if a leaf exists for that path
+								if (path[pp:] == "/") ||
+									(len(np.path) == len(path[pp:])+1 && np.path[len(path[pp:])] == '/' &&
+										path[pp:] == np.path[:len(np.path)-1] && np.handle != nil) {
+									tsr = true
+									return
+								}
+								break probe
+							}
+						} else {
+
 							n = n.children[i]
 							continue walk
 						}
 					}
+				}
 
+				if !n.wildChild {
 					// Nothing found.
 					// We can recommend to redirect to the same URL without a
 					// trailing slash if a leaf exists for that path.
@@ -359,7 +430,7 @@ walk: // outer loop for walking the tree
 				}
 
 				// handle wildcard child
-				n = n.children[0]
+				n = n.children[len(n.children)-1]
 				switch n.nType {
 				case param:
 					// find param end (either '/' or path end)
