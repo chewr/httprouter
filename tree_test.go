@@ -241,7 +241,6 @@ func testRoutes(t *testing.T, routes []testRoute) {
 			}
 		} else if recv != nil {
 			t.Errorf("unexpected panic for route '%s': %v", route.path, recv)
-			fmt.Printf("Unexpected panic for route %s", route.path)
 		}
 	}
 
