@@ -363,7 +363,6 @@ func TestTreeCatchAllConflict(t *testing.T) {
 		{"/src/*filepath", false},
 		{"/src4/static", false},
 		{"/src4/*filepath", true},
-
 	}
 	testRoutes(t, routes)
 }
@@ -601,6 +600,7 @@ func TestTreeFindCaseInsensitivePath(t *testing.T) {
 		{"/CMD/TOOL/", "/cmd/TOOL/", true, false},
 		{"/CMD/TOOL", "/cmd/TOOL/", true, true},
 		{"/SRC/FILE/PATH", "/src/FILE/PATH", true, false},
+		{"/SRC", "/src/", true, true},
 		{"/x/Y", "/x/y", true, false},
 		{"/x/Y/", "/x/y", true, true},
 		{"/X/y", "/x/y", true, false},
