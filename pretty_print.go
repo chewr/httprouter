@@ -7,13 +7,13 @@ import (
 )
 
 type nodeDiagLine struct {
-	priority  string
-	treeRepr  string
-	fullPath  string
-	wildcard  string
-	indices   string
-	nodeType  string
-	maxParams string
+	priority string
+	treeRepr string
+	fullPath string
+	wildcard string
+	indices  string
+	nodeType string
+	isLeaf   string
 }
 
 func (l *nodeDiagLine) tabString(pchar byte) string {
@@ -24,7 +24,7 @@ func (l *nodeDiagLine) tabString(pchar byte) string {
 		l.wildcard,
 		l.indices,
 		l.nodeType,
-		l.maxParams,
+		l.isLeaf,
 	)
 }
 
@@ -37,7 +37,7 @@ func PrettyPrint(n *node) string {
 
 	tw.Init(buf, 0, 8, 4, '\t', 0)
 
-	fmt.Fprintln(tw, "Priority\tNode Tree\tRoute\tWildcard\tIndices\tType\tParams")
+	fmt.Fprintln(tw, "Priority\tNode Tree\tRoute\tWildcard\tIndices\tType\tLeaf")
 
 	for _, nd := range nodes {
 		fmt.Fprintln(tw, nd.tabString('\t'))
@@ -51,11 +51,11 @@ func (n *node) prettyPrint(prefix string, depth int) []*nodeDiagLine {
 	out := make([]*nodeDiagLine, 1)
 
 	out[0] = &nodeDiagLine{
-		priority:  fmt.Sprintf("%v", n.priority),
-		wildcard:  fmt.Sprintf("%v", n.wildChild),
-		indices:   n.indices,
-		nodeType:  readable(n.nType),
-		maxParams: fmt.Sprintf("%v", n.maxParams),
+		priority: fmt.Sprintf("%v", n.priority),
+		wildcard: fmt.Sprintf("%v", n.wildChild),
+		indices:  n.indices,
+		nodeType: readable(n.nType),
+		isLeaf:   fmt.Sprintf("%v", n.handle != nil),
 	}
 
 	// tree representation
